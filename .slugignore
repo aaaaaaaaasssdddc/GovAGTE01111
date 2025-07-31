@@ -1,15 +1,51 @@
-# Ignore files for Heroku slug compilation
-*.pyc
+# Heroku .slugignore file
+# Reduce deployment size by excluding unnecessary files
+
+# Development files
+replit.md
+.replit
 __pycache__/
-.git/
-.gitignore
-README.md
-.DS_Store
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+
+# Documentation and assets
+attached_assets/
+*.md
+*.txt
+*.rst
+README*
+
+# Development tools
+.vscode/
+.idea/
 *.log
+
+# Backup files
+*_backup.html
+*.bak
+
+# Test files
+test_*
+*_test.py
+tests/
+
+# Cache files
+.cache/
+.pytest_cache/
+
+# Environment files (already handled by Heroku)
 .env
 .env.*
-node_modules/
-attached_assets/
-.replit
-replit.md
+
+# Git files
+.git/
+.gitignore
+
+# Health check (not needed in production)
 health_check.py
+
+# Create image script
+create_image.py
