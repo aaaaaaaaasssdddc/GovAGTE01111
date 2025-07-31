@@ -7,6 +7,7 @@ from app import db
 class Program(db.Model):
     """Model for government education programs"""
     __tablename__ = 'programs'
+    __table_args__ = {'extend_existing': True}
     
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(200), nullable=False)
@@ -23,6 +24,7 @@ class Program(db.Model):
 class Position(db.Model):
     """Model for job positions within programs"""
     __tablename__ = 'positions'
+    __table_args__ = {'extend_existing': True}
     
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
