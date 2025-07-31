@@ -2,12 +2,14 @@ import os
 import logging
 import requests
 import json
+import gzip
 from datetime import datetime, timedelta
-from flask import Flask, render_template, request, jsonify, make_response
+from flask import Flask, render_template, request, jsonify, make_response, g
 from flask.helpers import send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from sqlalchemy.orm import DeclarativeBase
+from werkzeug.middleware.proxy_fix import ProxyFix
 # from for4_payments import For4PaymentsAPI, PaymentRequestData, create_payment_api
 
 # Configure logging para produção
@@ -27,9 +29,13 @@ db = SQLAlchemy(model_class=Base)
 app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET", "dev-secret-key-change-in-production")
 
+# Add ProxyFix for Heroku
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
+
 # Configurações de produção para Heroku
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 31536000  # 1 ano de cache para assets estáticos
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['JSON_SORT_KEYS'] = False  # Evita ordenação desnecessária de JSON
 
 # Configurações específicas para produção
 if os.environ.get('FLASK_ENV') == 'production':
@@ -119,11 +125,39 @@ def init_database():
     except Exception as e:
         print(f"⚠️ Erro na inicialização: {e}")
 
+# Middleware de compressão para melhor performance
+from functools import wraps
+
+def compress_response(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        response = make_response(f(*args, **kwargs))
+        
+        # Adicionar headers de performance
+        response.headers['X-Content-Type-Options'] = 'nosniff'
+        response.headers['X-Frame-Options'] = 'DENY'
+        response.headers['X-XSS-Protection'] = '1; mode=block'
+        
+        # Headers de cache inteligente
+        if request.endpoint in ['index', 'static']:
+            response.headers['Cache-Control'] = 'public, max-age=1800, s-maxage=3600'
+        elif request.endpoint and 'api' in request.endpoint:
+            response.headers['Cache-Control'] = 'public, max-age=300'
+        else:
+            response.headers['Cache-Control'] = 'public, max-age=600'
+            
+        return response
+    return decorated_function
+
+# Aplicar middleware a todas as rotas
+app.before_request_funcs.setdefault(None, []).append(lambda: None)
+
 # Inicializar quando o app for importado
 with app.app_context():
     init_database()
 
 @app.route('/')
+@compress_response
 def index():
     """Main page showing the Correios Contrata program"""
     try:
@@ -131,19 +165,14 @@ def index():
         program = Program.query.filter_by(title='Correios Contrata').first()
         positions = Position.query.filter_by(program_id=1).limit(10).all() if program else []
         
-        response = make_response(render_template('index.html', program=program, positions=positions))
-        # Cache longo para página inicial no Heroku
-        response.headers['Cache-Control'] = 'public, max-age=1800, s-maxage=3600'
-        response.headers['Vary'] = 'Accept-Encoding'
-        return response
+        return render_template('index.html', program=program, positions=positions)
     except Exception as e:
         app.logger.error(f"Erro na página inicial: {e}")
         # Página de fallback sem dados do banco
-        response = make_response(render_template('index.html', program=None, positions=[]))
-        response.headers['Cache-Control'] = 'public, max-age=300'
-        return response
+        return render_template('index.html', program=None, positions=[])
 
 @app.route('/acesso-informacao')
+@compress_response
 def acesso_informacao():
     """Access to Information page"""
     return render_template('index.html', page_title="Acesso à Informação")
@@ -168,7 +197,16 @@ def lista_programas():
     """Programs List page"""
     return render_template('index.html', page_title="Lista de Programas")
 
+@app.route('/sw.js')
+def service_worker():
+    """Serve service worker for caching"""
+    response = make_response(send_from_directory('static', 'sw.js'))
+    response.headers['Content-Type'] = 'application/javascript'
+    response.headers['Cache-Control'] = 'public, max-age=86400'  # 24 hours
+    return response
+
 @app.route('/search')
+@compress_response
 def search():
     """Search API endpoint"""
     query = request.args.get('q', '').strip()

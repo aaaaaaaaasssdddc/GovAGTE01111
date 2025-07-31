@@ -5,30 +5,54 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Correios Contrata - gov.br{% endblock %}</title>
     
-    <!-- External CSS - Optimized loading -->
+    <!-- Critical CSS inline for instant load -->
+    <style>
+        /* Critical CSS - Loading instantly */
+        html,body{margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;line-height:1.6}
+        .header{background:#1351B4;color:white;padding:1rem 0}
+        .container{max-width:1200px;margin:0 auto;padding:0 1rem}
+        .btn{padding:0.75rem 1.5rem;border:none;border-radius:4px;cursor:pointer;text-decoration:none;display:inline-block;transition:all 0.2s}
+        .btn-primary{background:#1351B4;color:white}
+        .btn-primary:hover{background:#0d3f96}
+        .btn-success{background:#168821;color:white}
+        .btn-success:hover{background:#12611c}
+        .loading{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:9999;display:none}
+        .fade-in{opacity:0;animation:fadeIn 0.3s forwards}
+        @keyframes fadeIn{to{opacity:1}}
+        .nav-link{color:white;text-decoration:none;padding:0.5rem 1rem;border-radius:4px;transition:background 0.2s}
+        .nav-link:hover{background:rgba(255,255,255,0.1)}
+    </style>
+    
+    <!-- External CSS - Deferred loading -->
     <link rel="preconnect" href="https://cdnjs.cloudflare.com">
-    <link rel="preconnect" href="https://cdn.tailwindcss.com">
     <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
     <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"></noscript>
-    
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tailwind CSS - Load after critical content -->
     <script>
-    tailwind.config = {
-        theme: {
-            extend: {
-                colors: {
-                    'govbr-blue': '#1351B4',
-                    'govbr-green': '#168821',
-                    'govbr-gray': '#6C757D'
-                }
-            }
-        }
-    }
+        // Load Tailwind CSS after page content is rendered
+        window.addEventListener('DOMContentLoaded', function() {
+            const script = document.createElement('script');
+            script.src = 'https://cdn.tailwindcss.com';
+            script.onload = function() {
+                tailwind.config = {
+                    theme: {
+                        extend: {
+                            colors: {
+                                'govbr-blue': '#1351B4',
+                                'govbr-green': '#168821',
+                                'govbr-gray': '#6C757D'
+                            }
+                        }
+                    }
+                };
+            };
+            document.head.appendChild(script);
+        });
     </script>
     
-    <!-- Custom CSS -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/custom.css') }}">
+    <!-- Custom CSS - Deferred -->
+    <link rel="preload" href="{{ url_for('static', filename='css/custom.css') }}" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="{{ url_for('static', filename='css/custom.css') }}"></noscript>
     
     <!-- SEO and Meta Tags -->
     <meta name="description" content="{% block description %}Programa Correios Contrata - Governo Federal{% endblock %}">
@@ -60,6 +84,9 @@
     src="https://www.facebook.com/tr?id=785028367210803&ev=PageView&noscript=1"
     /></noscript>
     <!-- End Meta Pixel Code -->
+    
+    <!-- Performance Script - Load immediately -->
+    <script src="{{ url_for('static', filename='js/performance.js') }}" defer></script>
     
     <!-- Favicon -->
     <link rel="icon" type="image/x-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🇧🇷</text></svg>">
