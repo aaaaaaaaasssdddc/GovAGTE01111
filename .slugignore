@@ -14,9 +14,11 @@ __pycache__/
 # Documentation and assets
 attached_assets/
 *.md
-*.txt
 *.rst
 README*
+# Exclude only specific txt files, not requirements.txt
+attached_assets/*.txt
+!runtime.txt
 
 # Development tools
 .vscode/
